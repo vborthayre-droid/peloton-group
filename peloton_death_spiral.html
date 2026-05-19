@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Peloton & The Death Spiral | Managerial Accounting Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1a202c;
+    --muted: #64748b;
+    --accent: #c0392b;
+    --accent2: #e74c3c;
+    --blue: #2563eb;
+    --green: #16a34a;
+    --orange: #d97706;
+    --purple: #7c3aed;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #1a202c 0%, #2d3748 60%, #c0392b 100%);
+    color: #fff;
+    padding: 56px 40px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(192,57,43,0.35) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 20%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-inner { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(192,57,43,0.35);
+    border: 1px solid rgba(192,57,43,0.6);
+    color: #fca5a5;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.15;
+    margin-bottom: 14px;
+  }
+  .hero h1 span { color: #fca5a5; }
+  .hero p {
+    font-size: 16px;
+    color: rgba(255,255,255,0.75);
+    max-width: 680px;
+    margin-bottom: 8px;
+  }
+  .hero-meta {
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 10px;
+  }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+  .section { padding: 40px 0 0; }
+  .section-last { padding-bottom: 60px; }
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .section-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 24px;
+  }
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 40px 0 0;
+  }
+
+  /* ── KPI CARDS ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: -28px;
+    position: relative;
+    z-index: 10;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.13); }
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .kpi-sub { font-size: 12px; color: var(--muted); }
+  .kpi-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  /* ── SIMULATOR ── */
+  .simulator-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 768px) { .simulator-grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  /* Slider */
+  .slider-wrap { margin-bottom: 28px; }
+  .slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .slider-label { font-size: 13px; font-weight: 600; color: var(--text); }
+  .slider-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--pct, 0%), #e2e8f0 var(--pct, 0%), #e2e8f0 100%);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid #fff;
+    box-shadow: 0 2px 8px rgba(192,57,43,0.4);
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .sim-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .sim-metric {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    transition: background 0.3s;
+  }
+  .sim-metric.danger { background: #fff5f5; border-color: #fecaca; }
+  .sim-metric-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .sim-metric-value { font-size: 20px; font-weight: 800; color: var(--text); }
+  .sim-metric-value.red { color: var(--accent); }
+  .sim-metric-delta {
+    font-size: 11px;
+    margin-top: 2px;
+    font-weight: 600;
+  }
+  .delta-up { color: var(--accent); }
+  .delta-down { color: var(--green); }
+
+  .warning-bar {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.4s;
+  }
+  .warning-bar.green { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .warning-bar.yellow { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+  .warning-bar.red { background: #fff5f5; color: #991b1b; border: 1px solid #fecaca; }
+
+  /* ── CHART ── */
+  .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
+  .chart-wrap { position: relative; height: 300px; }
+
+  /* ── SPIRAL FLOW ── */
+  .spiral-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 20px 0;
+  }
+  .flow-box {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    text-align: center;
+    min-width: 150px;
+    max-width: 170px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: fadeInUp 0.5s ease both;
+  }
+  .flow-box:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .flow-box .fb-icon { font-size: 24px; margin-bottom: 6px; }
+  .flow-box .fb-title { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .flow-box .fb-sub { font-size: 11px; color: var(--muted); }
+  .flow-box.danger { border-color: #fecaca; background: #fff5f5; }
+  .flow-box.warn { border-color: #fde68a; background: #fffbeb; }
+  .flow-arrow {
+    font-size: 22px;
+    color: var(--accent);
+    padding: 0 4px;
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.9)} }
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── TREND TABLE ── */
+  .trend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .trend-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .trend-year {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .trend-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .trend-row:last-child { border-bottom: none; }
+  .trend-row-label { color: var(--muted); }
+  .trend-row-val { font-weight: 700; }
+  .bar-mini {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 4px;
+    transition: width 0.6s ease;
+  }
+
+  /* ── EDUCATION ── */
+  .edu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .edu-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s;
+  }
+  .edu-card:hover { transform: translateY(-2px); }
+  .edu-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+  .edu-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .edu-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* ── COMMENTARY ── */
+  .commentary {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-top: 20px;
+  }
+  .commentary h4 { font-size: 14px; font-weight: 700; color: #1e40af; margin-bottom: 8px; }
+  .commentary p { font-size: 13px; color: #1e3a5f; line-height: 1.7; }
+
+  /* ── TOOLTIP ── */
+  .tooltip-wrap { position: relative; display: inline-block; cursor: help; }
+  .tooltip-wrap .tt {
+    visibility: hidden;
+    opacity: 0;
+    background: #1a202c;
+    color: #fff;
+    font-size: 12px;
+    border-radius: 6px;
+    padding: 8px 12px;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    z-index: 100;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    max-width: 220px;
+    white-space: normal;
+    text-align: center;
+  }
+  .tooltip-wrap:hover .tt { visibility: visible; opacity: 1; }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: #1a202c;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    padding: 24px;
+    font-size: 12px;
+    margin-top: 60px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .hero { padding: 36px 20px 40px; }
+    .container { padding: 0 16px; }
+    .sim-metrics { grid-template-columns: 1fr; }
+    .spiral-flow { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+  }
+
+  /* ── PROGRESS RING ── */
+  .ring-wrap { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; margin-top: 12px; }
+  .ring-item { text-align: center; }
+  .ring-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 8px; }
+  svg.ring { transform: rotate(-90deg); }
+  .ring-val { font-size: 13px; font-weight: 800; fill: var(--text); transform: rotate(90deg); transform-origin: center; }
+
+  /* Animated number */
+  .animated-num { transition: all 0.4s ease; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ HERO -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">📊 Managerial Accounting · FY2024 Case Study</div>
+    <h1>Peloton & the <span>Death Spiral</span></h1>
+    <p>When fixed costs are spread over a shrinking subscriber base, cost-per-user rises — which can trigger further churn, creating a self-reinforcing downward loop. This dashboard explores that risk using Peloton's FY2024 financial data.</p>
+    <p class="hero-meta">Data sourced from Peloton Interactive, Inc. FY2024 10-K (fiscal year ended June 30, 2024) · All figures in USD</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ KPI CARDS -->
+<div class="container">
+  <div class="kpi-grid">
+
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#2563eb"></span>Paid Subscribers</div>
+      <div class="kpi-value" style="color:#2563eb">2.981M</div>
+      <div class="kpi-sub">Connected Fitness Subscriptions · FY24</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#16a34a"></span>Subscription Revenue</div>
+      <div class="kpi-value" style="color:#16a34a">$1.709B</div>
+      <div class="kpi-sub">~$573 ARPU per subscriber · FY24</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#7c3aed"></span>Subscription Gross Margin</div>
+      <div class="kpi-value" style="color:#7c3aed">67.8%</div>
+      <div class="kpi-sub">$1.158B gross profit on subscriptions</div>
+    </div>
+
+    <div class="kpi-card tooltip-wrap">
+      <div class="kpi-label"><span class="kpi-dot" style="background:#c0392b"></span>Est. Fixed Content Costs</div>
+      <div class="kpi-value" style="color:#c0392b">~$385M</div>
+      <div class="kpi-sub">Studio, instructors, production, depreciation</div>
+      <div class="tt">Estimated as ~70% of total subscription COGS ($551M). Includes studio rent, instructor salaries, production staff, content depreciation, and platform overhead — largely fixed regardless of subscriber count.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SIMULATOR -->
+<div class="container section">
+  <div class="section-title">
+    <div class="icon" style="background:#fff0f0">🎛️</div>
+    Interactive Death Spiral Simulator
+  </div>
+  <div class="section-sub">Drag the slider to simulate subscriber decline and observe how fixed cost allocation pressure escalates.</div>
+
+  <div class="simulator-grid">
+    <!-- Controls -->
+    <div class="card">
+      <div class="card-title">Subscriber Decline Scenario</div>
+
+      <div class="slider-wrap">
+        <div class="slider-header">
+          <span class="slider-label">Subscriber Decline</span>
+          <span class="slider-val" id="sliderPct">0%</span>
+        </div>
+        <input type="range" id="declineSlider" min="0" max="40" value="0" step="1" />
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;">
+          <span>0% (Baseline)</span><span>20% (Stress)</span><span>40% (Crisis)</span>
+        </div>
+      </div>
+
+      <div class="sim-metrics">
+        <div class="sim-metric" id="metricSubs">
+          <div class="sim-metric-label">Subscribers</div>
+          <div class="sim-metric-value animated-num" id="valSubs">2.981M</div>
+          <div class="sim-metric-delta" id="deltaSubs" style="color:var(--muted)">Baseline</div>
+        </div>
+        <div class="sim-metric" id="metricFixed">
+          <div class="sim-metric-label">Fixed Cost / Sub</div>
+          <div class="sim-metric-value animated-num" id="valFixed">$129</div>
+          <div class="sim-metric-delta" id="deltaFixed" style="color:var(--muted)">Baseline</div>
+        </div>
+        <div class="sim-metric" id="metricTotal">
+          <div class="sim-metric-label">Total COGS / Sub</div>
+          <div class="sim-metric-value animated-num" id="valTotal">$185</div>
+          <div class="sim-metric-delta" id="deltaTotal" style="color:var(--muted)">Baseline</div>
+        </div>
+        <div class="sim-metric" id="metricMargin">
+          <div class="sim-metric-label">Implied Sub Margin</div>
+          <div class="sim-metric-value animated-num" id="valMargin">67.8%</div>
+          <div class="sim-metric-delta" id="deltaMargin" style="color:var(--muted)">Baseline</div>
+        </div>
+      </div>
+
+      <div class="warning-bar green" id="warningBar">
+        <span>✅</span> <span id="warningText">Baseline scenario — margins healthy at 67.8%</span>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card">
+      <div class="card-title">Fixed Cost Per Subscriber vs. Decline Rate</div>
+      <div class="chart-wrap">
+        <canvas id="spiralChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SPIRAL FLOW DIAGRAM -->
+<div class="container section">
+  <div class="section-title">
+    <div class="icon" style="background:#fff0f0">🌀</div>
+    The Death Spiral Mechanism
+  </div>
+  <div class="section-sub">A self-reinforcing loop where each step amplifies the next — the core risk in high fixed-cost platform businesses.</div>
+
+  <div class="card" style="padding:32px 24px">
+    <div class="spiral-flow">
+      <div class="flow-box danger" style="animation-delay:0s">
+        <div class="fb-icon">📉</div>
+        <div class="fb-title">Subscriber Decline</div>
+        <div class="fb-sub">Peloton lost ~1.5M subs from FY22 peak of 2.97M → FY23 trough</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box danger" style="animation-delay:0.1s">
+        <div class="fb-icon">📊</div>
+        <div class="fb-title">Fixed Costs Spread Thinner</div>
+        <div class="fb-sub">~$385M in fixed content costs allocated across fewer users → higher cost/sub</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box warn" style="animation-delay:0.2s">
+        <div class="fb-icon">💸</div>
+        <div class="fb-title">Margin Compression</div>
+        <div class="fb-sub">Gross margin erodes; pressure to raise prices or cut content investment</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box warn" style="animation-delay:0.3s">
+        <div class="fb-icon">😤</div>
+        <div class="fb-title">Reduced Value Proposition</div>
+        <div class="fb-sub">Fewer instructors, less content, or higher prices reduce perceived value</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box danger" style="animation-delay:0.4s">
+        <div class="fb-icon">🔄</div>
+        <div class="fb-title">Further Churn</div>
+        <div class="fb-sub">Dissatisfied subscribers cancel → loop repeats with smaller base</div>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;padding:14px 20px;background:#fff5f5;border-radius:8px;border:1px solid #fecaca;">
+      <span style="font-size:13px;color:#991b1b;font-weight:600;">⚠️ The spiral accelerates because fixed costs are <em>sticky</em> — they don't decline proportionally with subscribers, creating an asymmetric cost structure.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ TREND ANALYSIS -->
+<div class="container section">
+  <div class="section-title">
+    <div class="icon" style="background:#eff6ff">📅</div>
+    Peloton Historical Trend Analysis (FY22–FY24)
+  </div>
+  <div class="section-sub">Three years of data illustrating the subscriber trajectory and its financial consequences.</div>
+
+  <div class="trend-grid">
+
+    <div class="trend-card">
+      <div class="trend-year" style="color:#c0392b">⚠ FY2022 — Peak & Collapse</div>
+      <div class="trend-row">
+        <span class="trend-row-label">Ending Paid Subscribers</span>
+        <span class="trend-row-val" style="color:#c0392b">2.97M</span>
+      </div>
+      <div class="bar-mini" style="background:#fecaca;width:100%"></div>
+      <div class="trend-row">
+        <span class="trend-row-label">Sub Gross Margin</span>
+        <span class="trend-row-val">~68%</span>
+      </div>
+      <div class="trend-row">
+        <span class="trend-row-label">Net Loss</span>
+        <span class="trend-row-val" style="color:#c0392b">$(2.83B)</span>
+      </div>
+      <div class="trend-row">
+        <span class="trend-row-label">Fixed Cost / Sub (est.)</span>
+        <span class="trend-row-val">~$130</span>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.6;">Pandemic-era peak subscribers. Massive restructuring charges and impairments drove net loss. Revenue declined as hardware demand collapsed post-COVID.</div>
+    </div>
+
+    <div class="trend-card">
+      <div class="trend-year" style="color:#d97706">⚡ FY2023 — Restructuring</div>
+      <div class="trend-row">
+        <span class="trend-row-label">Ending Paid Subscribers</span>
+        <span class="trend-row-val" style="color:#d97706">3.08M</span>
+      </div>
+      <div class="bar-mini" style="background:#fde68a;width:95%"></div>
+      <div class="trend-row">
+        <span class="trend-row-label">Sub Gross Margin</span>
+        <span class="trend-row-val">~67%</span>
+      </div>
+      <div class="trend-row">
+        <span class="trend-row-label">Net Loss</span>
+        <span class="trend-row-val" style="color:#c0392b">$(1.26B)</span>
+      </div>
+      <div class="trend-row">
+        <span class="trend-row-label">Fixed Cost / Sub (est.)</span>
+        <span class="trend-row-val">~$128</span>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.6;">New CEO Barry McCarthy implemented aggressive cost cuts, layoffs, and outsourced manufacturing. Subscription base stabilized but hardware sales continued to decline.</div>
+    </div>
+
+    <div class="trend-card">
+      <div class="trend-year" style="color:#2563eb">📊 FY2024 — Contraction</div>
+      <div class="trend-row">
+        <span class="trend-row-label">Ending Paid Subscribers</span>
+        <span class="trend-row-val" style="color:#2563eb">2.981M</span>
+      </div>
+      <div class="bar-mini" style="background:#bfdbfe;width:92%"></div>
+      <div class="trend-row">
+        <span class="trend-row-label">Sub Gross Margin</span>
+        <span class="trend-row-val" style="color:#16a34a">67.8%</span>
+      </div>
+      <div class="trend-row">
+        <span class="trend-row-label">Net Loss</span>
+        <span class="trend-row-val" style="color:#c0392b">$(289M)</span>
+      </div>
+      <div class="trend-row">
+        <span class="trend-row-label">Fixed Cost / Sub (est.)</span>
+        <span class="trend-row-val">~$129</span>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.6;">Subscriber base declined slightly YoY. Losses narrowed significantly due to cost discipline. Subscription margins held, but subscriber growth remains the critical unresolved challenge.</div>
+    </div>
+
+  </div>
+
+  <div class="commentary">
+    <h4>📌 Analyst Commentary</h4>
+    <p>Peloton is <strong>not necessarily in an active death spiral today</strong> — subscription gross margins have remained resilient at ~68%, and the company has dramatically reduced operating losses through restructuring. However, the business model demonstrates <strong>classic death spiral risk</strong>: approximately 70% of subscription COGS are fixed (studio infrastructure, instructor contracts, content production, platform depreciation). If paid subscribers decline meaningfully below ~2.5M, fixed cost absorption deteriorates rapidly, threatening the subscription margin that is Peloton's primary path to profitability. The denominator effect is the key risk: <em>fixed costs don't shrink when subscribers leave.</em></p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ EDUCATION -->
+<div class="container section section-last">
+  <div class="section-title">
+    <div class="icon" style="background:#f5f3ff">🎓</div>
+    Managerial Accounting Concepts
+  </div>
+  <div class="section-sub">The theoretical framework underlying the death spiral — essential for understanding platform and subscription business models.</div>
+
+  <div class="edu-grid">
+
+    <div class="edu-card">
+      <div class="edu-icon" style="background:#eff6ff">📦</div>
+      <h4>Fixed vs. Variable Costs</h4>
+      <p>Fixed costs (studio rent, instructor salaries, platform infrastructure) remain constant regardless of subscriber count. Variable costs (payment processing, some bandwidth) scale with users. Peloton's ~70% fixed COGS ratio creates high operating leverage — great when growing, dangerous when shrinking.</p>
+    </div>
+
+    <div class="edu-card">
+      <div class="edu-icon" style="background:#f0fdf4">🧮</div>
+      <h4>Overhead Absorption</h4>
+      <p>Fixed overhead is "absorbed" into unit costs by dividing total fixed costs by the number of units (subscribers). When the denominator (subscribers) falls, each remaining subscriber absorbs a larger share of overhead. This is the mechanical engine of the death spiral.</p>
+    </div>
+
+    <div class="edu-card">
+      <div class="edu-icon" style="background:#fff7ed">📐</div>
+      <h4>The Denominator Effect</h4>
+      <p>A critical managerial accounting concept: as volume decreases, fixed cost per unit increases non-linearly. A 20% decline in subscribers doesn't produce a 20% increase in cost/sub — it produces a <em>25% increase</em> (1/0.8 = 1.25×). This convexity accelerates the spiral.</p>
+    </div>
+
+    <div class="edu-card">
+      <div class="edu-icon" style="background:#fdf4ff">🏭</div>
+      <h4>Excess Capacity Pressure</h4>
+      <p>Peloton's studios, instructor teams, and production infrastructure were built for a larger subscriber base. Excess capacity means fixed costs are being incurred without corresponding revenue. This creates pressure to either cut capacity (risking content quality) or raise prices (risking further churn).</p>
+    </div>
+
+    <div class="edu-card">
+      <div class="edu-icon" style="background:#fff5f5">🌀</div>
+      <h4>The Death Spiral in Services</h4>
+      <p>Unlike manufacturing (where excess inventory is the signal), service/platform businesses experience the death spiral through margin compression and churn. The spiral is particularly acute for subscription models because customers can exit monthly, making the feedback loop faster than in capital-intensive industries.</p>
+    </div>
+
+    <div class="edu-card">
+      <div class="edu-icon" style="background:#f0fdf4">🛡️</div>
+      <h4>Breaking the Spiral</h4>
+      <p>Escape routes include: (1) <strong>Grow the denominator</strong> — add subscribers via B2B/corporate wellness deals; (2) <strong>Reduce fixed costs</strong> — outsource production, cut studios; (3) <strong>Increase ARPU</strong> — premium tiers, app-only plans; (4) <strong>Diversify revenue</strong> — licensing content to other platforms. Peloton is pursuing all four.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ FOOTER -->
+<div class="footer">
+  <p>Dashboard built for educational purposes · Data from Peloton Interactive FY2024 10-K (filed with the SEC) · Fixed cost estimates are managerial accounting approximations based on disclosed COGS composition</p>
+  <p style="margin-top:6px;">Kenan-Flagler Business School · Managerial Accounting · FY2024 Case Analysis</p>
+</div>
+
+<script>
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const BASE_SUBS       = 2.981;   // millions
+const TOTAL_COGS      = 551;     // $M
+const FIXED_COGS      = 385;     // $M (~70% of COGS)
+const VARIABLE_COGS   = TOTAL_COGS - FIXED_COGS; // $166M
+const SUB_REV         = 1709;    // $M
+const ARPU            = SUB_REV / (BASE_SUBS * 12); // monthly ARPU
+const BASE_FIXED_PER  = (FIXED_COGS * 1e6) / (BASE_SUBS * 1e6); // $/sub/yr
+const BASE_VAR_PER    = (VARIABLE_COGS * 1e6) / (BASE_SUBS * 1e6);
+const BASE_TOTAL_PER  = BASE_FIXED_PER + BASE_VAR_PER;
+const BASE_ARPU_YR    = SUB_REV * 1e6 / (BASE_SUBS * 1e6);
+
+// ── CHART SETUP ────────────────────────────────────────────────────────────
+const xLabels = [];
+const yFixed  = [];
+const yMargin = [];
+
+for (let d = 0; d <= 40; d++) {
+  const subs = BASE_SUBS * (1 - d / 100);
+  const fixedPer = FIXED_COGS * 1e6 / (subs * 1e6);
+  const totalCogs = fixedPer + BASE_VAR_PER;
+  const margin = ((BASE_ARPU_YR - totalCogs) / BASE_ARPU_YR) * 100;
+  xLabels.push(d + '%');
+  yFixed.push(+fixedPer.toFixed(2));
+  yMargin.push(+margin.toFixed(2));
+}
+
+const ctx = document.getElementById('spiralChart').getContext('2d');
+const spiralChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: xLabels,
+    datasets: [
+      {
+        label: 'Fixed Cost / Subscriber ($)',
+        data: yFixed,
+        borderColor: '#c0392b',
+        backgroundColor: 'rgba(192,57,43,0.08)',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y',
+      },
+      {
+        label: 'Implied Sub Gross Margin (%)',
+        data: yMargin,
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,0.05)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        tension: 0.4,
+        fill: false,
+        borderDash: [5, 4],
+        yAxisID: 'y2',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: { font: { size: 11 }, boxWidth: 14, padding: 16 }
+      },
+      tooltip: {
+        backgroundColor: '#1a202c',
+        titleFont: { size: 12 },
+        bodyFont: { size: 12 },
+        padding: 12,
+        callbacks: {
+          label: ctx => {
+            if (ctx.datasetIndex === 0) return ` Fixed Cost/Sub: $${ctx.parsed.y.toFixed(0)}`;
+            return ` Sub Gross Margin: ${ctx.parsed.y.toFixed(1)}%`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          font: { size: 10 },
+          maxTicksLimit: 9,
+          color: '#94a3b8'
+        },
+        title: { display: true, text: 'Subscriber Decline (%)', font: { size: 11 }, color: '#64748b' }
+      },
+      y: {
+        position: 'left',
+        grid: { color: '#f1f5f9' },
+        ticks: {
+          font: { size: 10 },
+          color: '#c0392b',
+          callback: v => '$' + v.toFixed(0)
+        },
+        title: { display: true, text: 'Fixed Cost / Sub ($)', font: { size: 11 }, color: '#c0392b' }
+      },
+      y2: {
+        position: 'right',
+        grid: { drawOnChartArea: false },
+        ticks: {
+          font: { size: 10 },
+          color: '#2563eb',
+          callback: v => v.toFixed(0) + '%'
+        },
+        title: { display: true, text: 'Sub Gross Margin (%)', font: { size: 11 }, color: '#2563eb' }
+      }
+    }
+  }
+});
+
+// ── SLIDER LOGIC ───────────────────────────────────────────────────────────
+const slider = document.getElementById('declineSlider');
+
+function fmt(n) {
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+  return '$' + n.toFixed(0);
+}
+
+function updateSlider() {
+  const d = +slider.value;
+  const pct = d / 100;
+
+  // Update CSS gradient
+  slider.style.setProperty('--pct', d * 2.5 + '%');
+
+  const subs = BASE_SUBS * (1 - pct);
+  const fixedPer = FIXED_COGS * 1e6 / (subs * 1e6);
+  const totalPer = fixedPer + BASE_VAR_PER;
+  const margin = ((BASE_ARPU_YR - totalPer) / BASE_ARPU_YR) * 100;
+  const fixedIncrease = ((fixedPer / BASE_FIXED_PER) - 1) * 100;
+  const marginDelta = margin - 67.8;
+
+  // Update display
+  document.getElementById('sliderPct').textContent = d + '%';
+  document.getElementById('valSubs').textContent = subs.toFixed(3) + 'M';
+  document.getElementById('valFixed').textContent = '$' + fixedPer.toFixed(0);
+  document.getElementById('valTotal').textContent = '$' + totalPer.toFixed(0);
+  document.getElementById('valMargin').textContent = margin.toFixed(1) + '%';
+
+  // Deltas
+  if (d === 0) {
+    document.getElementById('deltaSubs').textContent = 'Baseline';
+    document.getElementById('deltaSubs').className = 'sim-metric-delta';
+    document.getElementById('deltaFixed').textContent = 'Baseline';
+    document.getElementById('deltaFixed').className = 'sim-metric-delta';
+    document.getElementById('deltaTotal').textContent = 'Baseline';
+    document.getElementById('deltaTotal').className = 'sim-metric-delta';
+    document.getElementById('deltaMargin').textContent = 'Baseline';
+    document.getElementById('deltaMargin').className = 'sim-metric-delta';
+  } else {
+    const subLost = (BASE_SUBS - subs).toFixed(3);
+    document.getElementById('deltaSubs').textContent = '▼ ' + subLost + 'M lost';
+    document.getElementById('deltaSubs').className = 'sim-metric-delta delta-up';
+
+    document.getElementById('deltaFixed').textContent = '▲ +' + fixedIncrease.toFixed(1) + '% vs baseline';
+    document.getElementById('deltaFixed').className = 'sim-metric-delta delta-up';
+
+    document.getElementById('deltaTotal').textContent = '▲ +$' + (totalPer - BASE_TOTAL_PER).toFixed(0) + ' vs baseline';
+    document.getElementById('deltaTotal').className = 'sim-metric-delta delta-up';
+
+    document.getElementById('deltaMargin').textContent = '▼ ' + Math.abs(marginDelta).toFixed(1) + 'pp compression';
+    document.getElementById('deltaMargin').className = 'sim-metric-delta delta-up';
+  }
+
+  // Danger styling
+  const metricFixed = document.getElementById('metricFixed');
+  const metricMargin = document.getElementById('metricMargin');
+  metricFixed.className = d >= 15 ? 'sim-metric danger' : 'sim-metric';
+  metricMargin.className = d >= 20 ? 'sim-metric danger' : 'sim-metric';
+  document.getElementById('valFixed').className = d >= 15 ? 'sim-metric-value red' : 'sim-metric-value';
+  document.getElementById('valMargin').className = d >= 20 ? 'sim-metric-value red' : 'sim-metric-value';
+
+  // Warning bar
+  const wb = document.getElementById('warningBar');
+  const wt = document.getElementById('warningText');
+  if (d === 0) {
+    wb.className = 'warning-bar green';
+    wt.textContent = 'Baseline scenario — subscription margins healthy at 67.8%';
+  } else if (d < 10) {
+    wb.className = 'warning-bar green';
+    wt.textContent = `Mild pressure: fixed cost/sub rises to $${fixedPer.toFixed(0)} (+${fixedIncrease.toFixed(1)}%). Margins still resilient.`;
+  } else if (d < 20) {
+    wb.className = 'warning-bar yellow';
+    wt.textContent = `⚠ Moderate stress: ${d}% decline pushes fixed cost/sub to $${fixedPer.toFixed(0)}. Margin at ${margin.toFixed(1)}% — watch closely.`;
+  } else if (d < 30) {
+    wb.className = 'warning-bar red';
+    wt.textContent = `🚨 High risk: Fixed cost/sub hits $${fixedPer.toFixed(0)} (+${fixedIncrease.toFixed(1)}%). Margin compressed to ${margin.toFixed(1)}%. Death spiral territory.`;
+  } else {
+    wb.className = 'warning-bar red';
+    wt.textContent = `🔴 Crisis scenario: ${d}% subscriber loss. Fixed cost/sub = $${fixedPer.toFixed(0)}. Gross margin collapses to ${margin.toFixed(1)}%. Existential risk.`;
+  }
+
+  // Update chart marker
+  spiralChart.data.datasets[0].pointRadius = Array(41).fill(0).map((_, i) => i === d ? 7 : 0);
+  spiralChart.data.datasets[0].pointBackgroundColor = Array(41).fill('transparent').map((_, i) => i === d ? '#c0392b' : 'transparent');
+  spiralChart.data.datasets[1].pointRadius = Array(41).fill(0).map((_, i) => i === d ? 7 : 0);
+  spiralChart.data.datasets[1].pointBackgroundColor = Array(41).fill('transparent').map((_, i) => i === d ? '#2563eb' : 'transparent');
+  spiralChart.update('none');
+}
+
+slider.addEventListener('input', updateSlider);
+updateSlider();
+</script>
+</body>
+</html>
